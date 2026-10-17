@@ -43,7 +43,7 @@ public sealed class BackupDbContext(DbContextOptions<BackupDbContext> options) :
         return state;
     }
 
-    public async Task MarkInterruptedRunsAsFailedAsync()
+    public async Task MarkInterruptedRunsAsInterruptedAsync()
     {
         var interruptedRuns = await BackupExecutions
             .Where(execution => execution.Status == BackupStatus.InProgress)
@@ -57,14 +57,14 @@ public sealed class BackupDbContext(DbContextOptions<BackupDbContext> options) :
         var now = DateTimeOffset.Now;
         foreach (var run in interruptedRuns)
         {
-            run.Status = BackupStatus.Failed;
+            run.Status = BackupStatus.Interrupted;
             run.CompletedAtLocal = now;
             run.CompletedAtUtc = now.ToUniversalTime();
             run.ErrorMessage = "The previous service process stopped before the backup completed.";
         }
 
         var state = await GetOrCreateStateAsync(CancellationToken.None);
-        state.LastBackupStatus = BackupStatus.Failed;
+        state.LastBackupStatus = BackupStatus.Interrupted;
         state.LastBackupCompletedAtLocal = now;
         state.LastBackupCompletedAtUtc = now.ToUniversalTime();
 

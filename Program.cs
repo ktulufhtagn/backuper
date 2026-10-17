@@ -29,7 +29,7 @@ using (var scope = host.Services.CreateScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<BackupDbContext>();
     await database.Database.MigrateAsync();
-    await database.MarkInterruptedRunsAsFailedAsync();
+    await database.MarkInterruptedRunsAsInterruptedAsync();
 }
 
 host.Run();

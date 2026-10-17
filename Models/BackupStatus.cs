@@ -6,4 +6,5 @@ public static class BackupStatus
     public const string InProgress = "InProgress";
     public const string Succeeded = "Succeeded";
     public const string Failed = "Failed";
+    public const string Interrupted = "Interrupted";
 }

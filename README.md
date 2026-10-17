@@ -10,7 +10,7 @@ Small Windows background service that runs a daily `rclone` backup to a Backblaz
 - Runs as soon as the PC is back on if it missed the scheduled time while powered off.
 - Stores backup history and last status in SQLite.
 - Writes rclone logs and removes logs older than 7 days.
-- Sends a Windows notification when a backup starts.
+- Sends a Windows notification when a backup starts and when it ends.
 
 ## Prerequisites
 
@@ -54,6 +54,14 @@ Default backup settings:
     "DatabasePath": "backuper.db",
     "LogDirectory": "Logs",
     "LogRetentionDays": 7
+  },
+  "Notifications": {
+    "Enabled": true,
+    "AppId": "Backuper",
+    "UseToast": true,
+    "UseMessageFallback": true,
+    "MessageExecutable": "msg.exe",
+    "MessageTimeoutSeconds": 20
   }
 }
 ```
@@ -80,6 +88,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& 'rclone' 'copy' 'C
 `--bwlimit 1Mi` limits upload bandwidth to 1 MiB/s so the internet connection remains usable during backup.
 
 The service treats the backup as failed if PowerShell exits with a non-zero code or if `rclone` does not create the expected log file.
+
+## Shutdown Behavior
+
+If the console app is closed with `Ctrl+C` or the Windows Service is stopped while a backup is running:
+
+- the service cancellation token is triggered;
+- the running PowerShell/rclone process tree is killed;
+- the current execution is saved as `Interrupted` in SQLite;
+- an end notification is sent with the interrupted status.
+
+If the process is force-killed, crashes, or Windows terminates it without graceful shutdown, any `InProgress` backup is marked as `Interrupted` on the next startup.
+
+## Notifications
+
+The app sends notifications at backup start and end.
+
+- Toast notifications are attempted through Windows toast APIs.
+- `msg.exe` notifications are enabled by default because Windows Services often cannot display normal toast notifications in the interactive desktop session.
+- If duplicate notifications are too noisy when running interactively, set `Notifications:UseMessageFallback` to `false`.
 
 ## Run locally
 

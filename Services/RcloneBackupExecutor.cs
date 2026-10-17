@@ -69,8 +69,36 @@ public sealed class RcloneBackupExecutor(
                 execution.Status,
                 rcloneResult.ExitCode,
                 logFilePath);
+
+            await notifier.NotifyBackupFinishedAsync(
+                execution.Status,
+                logFilePath,
+                execution.ErrorMessage,
+                CancellationToken.None);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            var completedAt = DateTimeOffset.Now;
+
+            execution.CompletedAtLocal = completedAt;
+            execution.CompletedAtUtc = completedAt.ToUniversalTime();
+            execution.Status = BackupStatus.Interrupted;
+            execution.ErrorMessage = "Backup interrupted because the service or application is stopping.";
+
+            state.LastBackupCompletedAtLocal = completedAt;
+            state.LastBackupCompletedAtUtc = completedAt.ToUniversalTime();
+            state.LastBackupStatus = BackupStatus.Interrupted;
+
+            await database.SaveChangesAsync(CancellationToken.None);
+            logger.LogWarning("Backup interrupted while service is stopping. Log: {LogFilePath}", logFilePath);
+
+            await notifier.NotifyBackupFinishedAsync(
+                execution.Status,
+                logFilePath,
+                execution.ErrorMessage,
+                CancellationToken.None);
+        }
+        catch (Exception exception)
         {
             var completedAt = DateTimeOffset.Now;
 
@@ -85,6 +113,12 @@ public sealed class RcloneBackupExecutor(
 
             await database.SaveChangesAsync(CancellationToken.None);
             logger.LogError(exception, "Backup failed before rclone completed. Log: {LogFilePath}", logFilePath);
+
+            await notifier.NotifyBackupFinishedAsync(
+                execution.Status,
+                logFilePath,
+                execution.ErrorMessage,
+                CancellationToken.None);
         }
     }
 
