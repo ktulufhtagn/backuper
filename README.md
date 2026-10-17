@@ -28,7 +28,7 @@ Verify rclone manually before installing the service:
 rclone lsd backup-remote:backups
 ```
 
-If the service runs as a Windows Service, verify using the same Windows account configured for the service. A common failure mode is that `rclone` works in your interactive terminal but is not available in the service account `PATH`. In that case, set `Backup:RcloneExecutable` to the full path of `rclone.exe`.
+If the service runs as a Windows Service, verify using the same Windows account configured for the service. A common failure mode is that `rclone` works in your interactive terminal but is not available in the service process `PATH`. The app refreshes `PATH` from the Windows user and machine environment before launching PowerShell; if it still cannot resolve `rclone`, set `Backup:RcloneExecutable` to the full path of `rclone.exe`.
 
 ## Configuration
 

@@ -108,6 +108,7 @@ public sealed class RcloneBackupExecutor(
         process.StartInfo.ArgumentList.Add("Bypass");
         process.StartInfo.ArgumentList.Add("-Command");
         process.StartInfo.ArgumentList.Add(BuildPowerShellRcloneCommand(options, logFilePath));
+        process.StartInfo.Environment["PATH"] = BuildRefreshedPath();
 
         process.Start();
 
@@ -165,7 +166,8 @@ public sealed class RcloneBackupExecutor(
         {
             "$ErrorActionPreference = 'Stop'",
             "try {",
-            $"    & {QuotePowerShellArgument(options.RcloneExecutable)} {rcloneCommand}",
+            $"    $resolvedRclone = Get-Command -Name {QuotePowerShellArgument(options.RcloneExecutable)} -CommandType Application -ErrorAction Stop",
+            $"    & ($resolvedRclone.Source) {rcloneCommand}",
             "    $exitCode = if ($null -eq $global:LASTEXITCODE) { if ($?) { 0 } else { 1 } } else { [int]$global:LASTEXITCODE }",
             $"    if ($exitCode -eq 0 -and -not (Test-Path -LiteralPath {quotedLogFilePath} -PathType Leaf)) {{",
             $"        [Console]::Error.WriteLine('rclone exited with code 0 but did not create the expected log file: ' + {quotedLogFilePath})",
@@ -174,6 +176,9 @@ public sealed class RcloneBackupExecutor(
             "    exit $exitCode",
             "} catch {",
             "    [Console]::Error.WriteLine($_.Exception.Message)",
+            "    [Console]::Error.WriteLine('User: ' + [System.Security.Principal.WindowsIdentity]::GetCurrent().Name)",
+            "    [Console]::Error.WriteLine('RcloneExecutable: ' + " + QuotePowerShellArgument(options.RcloneExecutable) + ")",
+            "    [Console]::Error.WriteLine('PATH: ' + $env:PATH)",
             "    exit 1",
             "}"
         });
@@ -182,6 +187,25 @@ public sealed class RcloneBackupExecutor(
     private static string QuotePowerShellArgument(string value)
     {
         return $"'{value.Replace("'", "''")}'";
+    }
+
+    private static string BuildRefreshedPath()
+    {
+        var paths = new[]
+        {
+            Environment.GetEnvironmentVariable("PATH"),
+            Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User),
+            Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Machine)
+        };
+
+        return string.Join(
+            Path.PathSeparator,
+            paths
+                .OfType<string>()
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .SelectMany(path => path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Select(Environment.ExpandEnvironmentVariables)
+                .Distinct(StringComparer.OrdinalIgnoreCase));
     }
 
     private static string BuildFailureMessage(RcloneProcessResult result)
