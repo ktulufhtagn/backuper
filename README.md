@@ -19,6 +19,7 @@ Small Windows background service that runs a daily `rclone` backup to a Backblaz
 - `rclone` installed and available to the service, either:
   - in the system `PATH`, or
   - configured with an absolute path in `Backup:RcloneExecutable`.
+- PowerShell available to the service, configured through `Backup:PowerShellExecutable`.
 - An rclone remote configured for the service account.
 
 Verify rclone manually before installing the service:
@@ -41,6 +42,7 @@ Default backup settings:
     "SourcePath": "C:\\Data\\ToBackUp",
     "Destination": "backup-remote:backups",
     "RcloneExecutable": "rclone",
+    "PowerShellExecutable": "powershell.exe",
     "Transfers": 4,
     "B2UploadConcurrency": 8,
     "UploadBandwidthLimit": "1Mi",
@@ -67,10 +69,10 @@ That directory is created automatically and contains:
 
 ## Backup command
 
-The service runs the equivalent of:
+The service launches PowerShell and runs the equivalent of:
 
 ```powershell
-rclone copy C:\Data\ToBackUp backup-remote:backups --progress --transfers 4 --b2-upload-concurrency 8 --bwlimit 1Mi --log-file <log-file> --log-level INFO
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& 'rclone' 'copy' 'C:\Data\ToBackUp' 'backup-remote:backups' '--progress' '--transfers' '4' '--b2-upload-concurrency' '8' '--bwlimit' '1Mi' '--log-file' '<log-file>' '--log-level' 'INFO'; exit $LASTEXITCODE"
 ```
 
 `--bwlimit 1Mi` limits upload bandwidth to 1 MiB/s so the internet connection remains usable during backup.

@@ -90,26 +90,17 @@ public sealed class RcloneBackupExecutor(
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
-            FileName = options.RcloneExecutable,
+            FileName = options.PowerShellExecutable,
             UseShellExecute = false,
             RedirectStandardError = true,
             RedirectStandardOutput = true
         };
 
-        process.StartInfo.ArgumentList.Add("copy");
-        process.StartInfo.ArgumentList.Add(options.SourcePath);
-        process.StartInfo.ArgumentList.Add(options.Destination);
-        process.StartInfo.ArgumentList.Add("--progress");
-        process.StartInfo.ArgumentList.Add("--transfers");
-        process.StartInfo.ArgumentList.Add(options.Transfers.ToString());
-        process.StartInfo.ArgumentList.Add("--b2-upload-concurrency");
-        process.StartInfo.ArgumentList.Add(options.B2UploadConcurrency.ToString());
-        process.StartInfo.ArgumentList.Add("--bwlimit");
-        process.StartInfo.ArgumentList.Add(options.UploadBandwidthLimit);
-        process.StartInfo.ArgumentList.Add("--log-file");
-        process.StartInfo.ArgumentList.Add(logFilePath);
-        process.StartInfo.ArgumentList.Add("--log-level");
-        process.StartInfo.ArgumentList.Add("INFO");
+        process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-ExecutionPolicy");
+        process.StartInfo.ArgumentList.Add("Bypass");
+        process.StartInfo.ArgumentList.Add("-Command");
+        process.StartInfo.ArgumentList.Add(BuildPowerShellRcloneCommand(options, logFilePath));
 
         process.Start();
 
@@ -137,5 +128,34 @@ public sealed class RcloneBackupExecutor(
     {
         var fileName = $"backup_{startedAt:yyyyMMdd_HHmmss}.log";
         return Path.GetFullPath(Path.Combine(logDirectory, fileName));
+    }
+
+    private static string BuildPowerShellRcloneCommand(BackupOptions options, string logFilePath)
+    {
+        var arguments = new[]
+        {
+            "copy",
+            options.SourcePath,
+            options.Destination,
+            "--progress",
+            "--transfers",
+            options.Transfers.ToString(),
+            "--b2-upload-concurrency",
+            options.B2UploadConcurrency.ToString(),
+            "--bwlimit",
+            options.UploadBandwidthLimit,
+            "--log-file",
+            logFilePath,
+            "--log-level",
+            "INFO"
+        };
+
+        var rcloneCommand = string.Join(" ", arguments.Select(QuotePowerShellArgument));
+        return $"& {QuotePowerShellArgument(options.RcloneExecutable)} {rcloneCommand}; exit $LASTEXITCODE";
+    }
+
+    private static string QuotePowerShellArgument(string value)
+    {
+        return $"'{value.Replace("'", "''")}'";
     }
 }

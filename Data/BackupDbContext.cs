@@ -24,6 +24,7 @@ public sealed class BackupDbContext(DbContextOptions<BackupDbContext> options) :
         modelBuilder.Entity<BackupState>(entity =>
         {
             entity.HasKey(state => state.Id);
+            entity.Property(state => state.Id).ValueGeneratedNever();
             entity.Property(state => state.LastBackupStatus).HasMaxLength(32).IsRequired();
         });
     }

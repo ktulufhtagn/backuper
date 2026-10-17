@@ -10,6 +10,8 @@ public sealed class BackupOptions
 
     public string RcloneExecutable { get; set; } = "rclone";
 
+    public string PowerShellExecutable { get; set; } = "powershell.exe";
+
     public int Transfers { get; set; } = 4;
 
     public int B2UploadConcurrency { get; set; } = 8;

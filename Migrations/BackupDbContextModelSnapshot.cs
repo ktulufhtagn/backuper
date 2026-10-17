@@ -65,6 +65,7 @@ partial class BackupDbContextModelSnapshot : ModelSnapshot
         modelBuilder.Entity("Backuper.Models.BackupState", entity =>
         {
             entity.Property<int>("Id")
+                .ValueGeneratedNever()
                 .HasColumnType("INTEGER");
 
             entity.Property<DateTimeOffset?>("LastBackupCompletedAtLocal")
