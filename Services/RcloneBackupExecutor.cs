@@ -42,27 +42,33 @@ public sealed class RcloneBackupExecutor(
 
         try
         {
-            var exitCode = await RunRcloneAsync(backupOptions, logFilePath, cancellationToken);
+            var rcloneResult = await RunRcloneAsync(backupOptions, logFilePath, cancellationToken);
             var completedAt = DateTimeOffset.Now;
 
             execution.CompletedAtLocal = completedAt;
             execution.CompletedAtUtc = completedAt.ToUniversalTime();
-            execution.ExitCode = exitCode;
-            execution.Status = exitCode == 0 ? BackupStatus.Succeeded : BackupStatus.Failed;
-            execution.ErrorMessage = exitCode == 0 ? null : $"rclone exited with code {exitCode}.";
+            execution.ExitCode = rcloneResult.ExitCode;
+            execution.Status = rcloneResult.ExitCode == 0 ? BackupStatus.Succeeded : BackupStatus.Failed;
+            execution.ErrorMessage = rcloneResult.ExitCode == 0
+                ? null
+                : BuildFailureMessage(rcloneResult);
 
             state.LastBackupCompletedAtLocal = completedAt;
             state.LastBackupCompletedAtUtc = completedAt.ToUniversalTime();
             state.LastBackupStatus = execution.Status;
 
-            if (exitCode == 0)
+            if (rcloneResult.ExitCode == 0)
             {
                 state.LastSuccessfulBackupAtLocal = completedAt;
                 state.LastSuccessfulBackupAtUtc = completedAt.ToUniversalTime();
             }
 
             await database.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Backup completed with status {Status}. Log: {LogFilePath}", execution.Status, logFilePath);
+            logger.LogInformation(
+                "Backup completed with status {Status} and exit code {ExitCode}. Log: {LogFilePath}",
+                execution.Status,
+                rcloneResult.ExitCode,
+                logFilePath);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -82,7 +88,7 @@ public sealed class RcloneBackupExecutor(
         }
     }
 
-    private static async Task<int> RunRcloneAsync(
+    private static async Task<RcloneProcessResult> RunRcloneAsync(
         BackupOptions options,
         string logFilePath,
         CancellationToken cancellationToken)
@@ -97,6 +103,7 @@ public sealed class RcloneBackupExecutor(
         };
 
         process.StartInfo.ArgumentList.Add("-NoProfile");
+        process.StartInfo.ArgumentList.Add("-NonInteractive");
         process.StartInfo.ArgumentList.Add("-ExecutionPolicy");
         process.StartInfo.ArgumentList.Add("Bypass");
         process.StartInfo.ArgumentList.Add("-Command");
@@ -110,8 +117,9 @@ public sealed class RcloneBackupExecutor(
         try
         {
             await process.WaitForExitAsync(cancellationToken);
-            await Task.WhenAll(outputTask, errorTask);
-            return process.ExitCode;
+            var output = await outputTask;
+            var error = await errorTask;
+            return new RcloneProcessResult(process.ExitCode, output, error);
         }
         catch
         {
@@ -151,11 +159,52 @@ public sealed class RcloneBackupExecutor(
         };
 
         var rcloneCommand = string.Join(" ", arguments.Select(QuotePowerShellArgument));
-        return $"& {QuotePowerShellArgument(options.RcloneExecutable)} {rcloneCommand}; exit $LASTEXITCODE";
+        var quotedLogFilePath = QuotePowerShellArgument(logFilePath);
+
+        return string.Join(Environment.NewLine, new[]
+        {
+            "$ErrorActionPreference = 'Stop'",
+            "try {",
+            $"    & {QuotePowerShellArgument(options.RcloneExecutable)} {rcloneCommand}",
+            "    $exitCode = if ($null -eq $global:LASTEXITCODE) { if ($?) { 0 } else { 1 } } else { [int]$global:LASTEXITCODE }",
+            $"    if ($exitCode -eq 0 -and -not (Test-Path -LiteralPath {quotedLogFilePath} -PathType Leaf)) {{",
+            $"        [Console]::Error.WriteLine('rclone exited with code 0 but did not create the expected log file: ' + {quotedLogFilePath})",
+            "        exit 1",
+            "    }",
+            "    exit $exitCode",
+            "} catch {",
+            "    [Console]::Error.WriteLine($_.Exception.Message)",
+            "    exit 1",
+            "}"
+        });
     }
 
     private static string QuotePowerShellArgument(string value)
     {
         return $"'{value.Replace("'", "''")}'";
     }
+
+    private static string BuildFailureMessage(RcloneProcessResult result)
+    {
+        var details = string.Join(
+            Environment.NewLine,
+            new[] { result.StandardError, result.StandardOutput }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim()));
+
+        if (string.IsNullOrWhiteSpace(details))
+        {
+            return $"rclone exited with code {result.ExitCode}.";
+        }
+
+        const int maxDetailsLength = 1800;
+        if (details.Length > maxDetailsLength)
+        {
+            details = details[..maxDetailsLength];
+        }
+
+        return $"rclone exited with code {result.ExitCode}. {details}";
+    }
+
+    private sealed record RcloneProcessResult(int ExitCode, string StandardOutput, string StandardError);
 }

@@ -28,6 +28,8 @@ Verify rclone manually before installing the service:
 rclone lsd backup-remote:backups
 ```
 
+If the service runs as a Windows Service, verify using the same Windows account configured for the service. A common failure mode is that `rclone` works in your interactive terminal but is not available in the service account `PATH`. In that case, set `Backup:RcloneExecutable` to the full path of `rclone.exe`.
+
 ## Configuration
 
 Runtime settings are read from `appsettings.json`, `appsettings.Development.json`, and `appsettings.Production.json`.
@@ -76,6 +78,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& 'rclone' 'copy' 'C
 ```
 
 `--bwlimit 1Mi` limits upload bandwidth to 1 MiB/s so the internet connection remains usable during backup.
+
+The service treats the backup as failed if PowerShell exits with a non-zero code or if `rclone` does not create the expected log file.
 
 ## Run locally
 
