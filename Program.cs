@@ -4,6 +4,14 @@ using Backuper.Data;
 using Backuper.Services;
 using Microsoft.EntityFrameworkCore;
 
+// The elevated helper has a fixed operation and never starts the backup host.
+if (args.Contains("--stop-service", StringComparer.OrdinalIgnoreCase))
+{
+    try { BackuperServiceControl.Stop(); }
+    catch { Environment.ExitCode = 1; }
+    return;
+}
+
 // The toolkit's activation switch must not start another backup scheduler.
 // Do not initialize the desktop notification library inside the service session.
 if (args.Contains("-ToastActivated", StringComparer.OrdinalIgnoreCase))
