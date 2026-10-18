@@ -62,6 +62,7 @@ builder.Services.AddSingleton<IWindowsNotifier, WindowsToastNotifier>();
 builder.Services.AddScoped<IBackupExecutor, RcloneBackupExecutor>();
 builder.Services.AddScoped<IBackupScheduler, BackupScheduler>();
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddHostedService<BackupDashboardPublisher>();
 
 var host = builder.Build();
 
