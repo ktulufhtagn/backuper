@@ -10,9 +10,5 @@ public sealed class NotificationOptions
 
     public bool UseToast { get; set; } = true;
 
-    public bool UseMessageFallback { get; set; } = true;
-
-    public string MessageExecutable { get; set; } = "msg.exe";
-
-    public int MessageTimeoutSeconds { get; set; } = 20;
+    public string QueueDirectory { get; set; } = @"%ProgramData%\Backuper\Notifications";
 }

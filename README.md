@@ -14,7 +14,7 @@ Small Windows background service that runs a daily `rclone` backup to a Backblaz
 
 ## Prerequisites
 
-- Windows.
+- Windows 10 version 1809 or later.
 - .NET 10 runtime installed on the machine running the service.
 - `rclone` installed and available to the service, either:
   - in the system `PATH`, or
@@ -59,9 +59,7 @@ Default backup settings:
     "Enabled": true,
     "AppId": "Backuper",
     "UseToast": true,
-    "UseMessageFallback": true,
-    "MessageExecutable": "msg.exe",
-    "MessageTimeoutSeconds": 20
+    "QueueDirectory": "%ProgramData%\\Backuper\\Notifications"
   }
 }
 ```
@@ -104,9 +102,31 @@ If the process is force-killed, crashes, or Windows terminates it without gracef
 
 The app sends notifications at backup start and end.
 
-- Toast notifications are attempted through Windows toast APIs.
-- `msg.exe` notifications are enabled by default because Windows Services often cannot display normal toast notifications in the interactive desktop session.
-- If duplicate notifications are too noisy when running interactively, set `Notifications:UseMessageFallback` to `false`.
+Notifications use native Windows toast banners and Notification Center, registered as **Backuper**. No message boxes are shown. Windows notification settings and Do Not Disturb control whether banners appear. Clicking a notification does not open the log.
+
+When running interactively, the app sends the toast directly through Microsoft's .NET notification library. Notification delivery does not launch PowerShell or register scheduled tasks.
+
+A Windows Service cannot display UI on your desktop. It writes notification text to `Notifications:QueueDirectory` (default `%ProgramData%\Backuper\Notifications`). A desktop companion reads messages and shows the banners. Enable it once, as your normal signed-in user, from the permanent published installation directory:
+
+```powershell
+.\publish\Backuper.exe --install-notifications
+```
+
+This creates a **Backuper Notifications** shortcut in your Windows Startup folder and starts the companion immediately. It then starts automatically at every sign-in, without a console window or any daily action. The backup service still starts at boot. If the backup starts before you sign in, the companion delivers its queued notifications at sign-in. The companion does not run backups. Delete this shortcut from `shell:startup` to disable automatic startup; rerun setup if you move the installation directory. The `--notifications` switch is the internal companion mode used by the shortcut.
+
+Unread queued messages are delivered even when the backup started or finished before login. Messages delayed by more than a minute include the event's local date and time. Per-user delivery receipts in `%LOCALAPPDATA%\Backuper\NotificationReceipts` prevent repeats across normal restarts. A crash between showing a toast and saving its receipt can repeat that notification. Multiple users running a companion will each receive notifications. Messages older than seven days are removed by the service.
+
+The service account needs write access to the queue directory, and the desktop account needs read access. The default ProgramData permissions normally provide this when the service creates the directory. For custom permissions, grant read access only to intended recipients; messages can contain log paths and error details. Use matching `Notifications:AppId` and `QueueDirectory` values in the service and companion. `AppId` separates queues; Microsoft’s library manages the Windows app identity. The service removes messages older than seven days.
+
+Test a native notification without starting a backup:
+
+```powershell
+.\publish\Backuper.exe --test-notification
+```
+
+Set `Notifications:Enabled` or `Notifications:UseToast` to `false` to disable backup notifications. The explicit test command still shows a test banner. Old `UseMessageFallback`, `MessageExecutable`, `MessageTimeoutSeconds`, and `InteractiveUser` settings are ignored. Delivery failures are logged without failing the backup.
+
+Native notification delivery uses [Microsoft's Windows Community Toolkit](https://learn.microsoft.com/en-us/dotnet/api/microsoft.toolkit.uwp.notifications.toastcontentbuilder).
 
 ## Run locally
 
@@ -127,10 +147,12 @@ dotnet run --environment Production
 Create a production build:
 
 ```powershell
-dotnet publish -c Release -o .\publish
+dotnet publish Backuper.csproj -c Release -o .\publish
 ```
 
 Copy or create `appsettings.Production.json` inside `.\publish` and adjust machine-specific settings if needed.
+
+When updating from the earlier PowerShell notification implementation, publish to a fresh directory and deploy that output. The old `Services\ShowWindowsToast.ps1` is no longer used or shipped. No antivirus exclusions are required by the application.
 
 ## Install as Windows Service
 
@@ -158,4 +180,4 @@ sc.exe delete Backuper
 
 - If the service runs as `LocalSystem`, `%USERPROFILE%` resolves to that account profile, not your interactive user profile.
 - If you want data under your own user profile, configure the service to run as your Windows user or set `Backup:AppDataDirectory` to an explicit absolute path.
-- Windows notifications from services can be blocked depending on the service account and interactive session.
+- Service notifications require the desktop companion running in the recipient's signed-in session.
