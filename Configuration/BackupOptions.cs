@@ -10,6 +10,9 @@ public sealed class BackupOptions
 
     public string RcloneExecutable { get; set; } = "rclone";
 
+    // Use an absolute path for service deployments, independent of the account profile.
+    public string? RcloneConfigPath { get; set; }
+
     public string PowerShellExecutable { get; set; } = "powershell.exe";
 
     public int Transfers { get; set; } = 4;

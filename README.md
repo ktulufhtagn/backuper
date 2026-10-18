@@ -44,6 +44,7 @@ Default backup settings:
     "SourcePath": "C:\\Data\\ToBackUp",
     "Destination": "backup-remote:backups",
     "RcloneExecutable": "rclone",
+    "RcloneConfigPath": null,
     "PowerShellExecutable": "powershell.exe",
     "Transfers": 4,
     "B2UploadConcurrency": 8,
@@ -86,6 +87,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& 'rclone' 'copy' 'C
 `--bwlimit 1Mi` limits upload bandwidth to 1 MiB/s so the internet connection remains usable during backup.
 
 The service treats the backup as failed if PowerShell exits with a non-zero code or if `rclone` does not create the expected log file.
+
+### Works in the IDE but fails as a service
+
+The IDE normally runs as your Windows user; the default Windows Service account is LocalSystem. Its PATH and rclone configuration directory differ. Set both `Backup:RcloneExecutable` and `Backup:RcloneConfigPath` to absolute paths in the **installed** `appsettings.Production.json`:
+
+```json
+"RcloneExecutable": "C:\\Tools\\rclone\\rclone.exe",
+"RcloneConfigPath": "C:\\Users\\YOUR_USER\\AppData\\Roaming\\rclone\\rclone.conf"
+```
+
+The service account must be able to execute rclone and read that configuration file and the source directory. `RcloneConfigPath` is passed as rclone's `--config` argument. A null value preserves rclone's default lookup for the current account. Relative config paths resolve against the application directory; environment variables expand for the service account, so `%APPDATA%` still points to LocalSystem's profile when used by LocalSystem. See [rclone's Windows service guidance](https://rclone.org/install/).
+
+Verify the file contains the expected remote without running a backup:
+
+```powershell
+& 'C:\Tools\rclone\rclone.exe' listremotes --config 'C:\Users\YOUR_USER\AppData\Roaming\rclone\rclone.conf' --ask-password=false
+```
+
+Republish the application after code changes, deploy the updated production configuration, and restart the service. Updating source settings alone does not update an already published installation. Nonzero rclone exits are logged as errors, including captured output, so they can be inspected in the Windows Application event log. The resolved account and config path are also logged at Information level; config contents are never logged by Backuper.
 
 ## Shutdown Behavior
 

@@ -64,11 +64,10 @@ public sealed class RcloneBackupExecutor(
             }
 
             await database.SaveChangesAsync(cancellationToken);
-            logger.LogInformation(
-                "Backup completed with status {Status} and exit code {ExitCode}. Log: {LogFilePath}",
-                execution.Status,
-                rcloneResult.ExitCode,
-                logFilePath);
+            if (rcloneResult.ExitCode == 0)
+                logger.LogInformation("Backup completed successfully. Log: {LogFilePath}", logFilePath);
+            else
+                logger.LogError("Backup failed: {Error}. Log: {LogFilePath}", execution.ErrorMessage, logFilePath);
 
             await notifier.NotifyBackupFinishedAsync(
                 execution.Status,
@@ -122,16 +121,28 @@ public sealed class RcloneBackupExecutor(
         }
     }
 
-    private static async Task<RcloneProcessResult> RunRcloneAsync(
+    private async Task<RcloneProcessResult> RunRcloneAsync(
         BackupOptions options,
         string logFilePath,
         CancellationToken cancellationToken)
     {
+        using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+        var configPath = ResolveRcloneConfigPath(options);
+        logger.LogInformation(
+            "Launching rclone as {Account}. Executable: {Executable}. Config: {ConfigPath}",
+            identity.Name, options.RcloneExecutable, configPath ?? "rclone account default");
+        if (configPath is not null && !File.Exists(configPath))
+            throw new FileNotFoundException(
+                $"The rclone configuration file is missing or inaccessible to {identity.Name}. " +
+                "Check Backup:RcloneConfigPath and the service account's read permissions.", configPath);
+
         using var process = new Process();
         process.StartInfo = new ProcessStartInfo
         {
             FileName = options.PowerShellExecutable,
             UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = AppContext.BaseDirectory,
             RedirectStandardError = true,
             RedirectStandardOutput = true
         };
@@ -175,7 +186,7 @@ public sealed class RcloneBackupExecutor(
 
     private static string BuildPowerShellRcloneCommand(BackupOptions options, string logFilePath)
     {
-        var arguments = new[]
+        var arguments = new List<string>
         {
             "copy",
             options.SourcePath,
@@ -192,6 +203,13 @@ public sealed class RcloneBackupExecutor(
             "--log-level",
             "INFO"
         };
+
+        var configPath = ResolveRcloneConfigPath(options);
+        if (configPath is not null)
+        {
+            arguments.Add("--config");
+            arguments.Add(configPath);
+        }
 
         var rcloneCommand = string.Join(" ", arguments.Select(QuotePowerShellArgument));
         var quotedLogFilePath = QuotePowerShellArgument(logFilePath);
@@ -221,6 +239,13 @@ public sealed class RcloneBackupExecutor(
     private static string QuotePowerShellArgument(string value)
     {
         return $"'{value.Replace("'", "''")}'";
+    }
+
+    private static string? ResolveRcloneConfigPath(BackupOptions options)
+    {
+        return string.IsNullOrWhiteSpace(options.RcloneConfigPath)
+            ? null
+            : Path.GetFullPath(Environment.ExpandEnvironmentVariables(options.RcloneConfigPath), AppContext.BaseDirectory);
     }
 
     private static string BuildRefreshedPath()
