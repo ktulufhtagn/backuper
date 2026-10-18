@@ -15,7 +15,7 @@ Small Windows background service that runs a daily `rclone` backup to a Backblaz
 ## Prerequisites
 
 - Windows 10 version 1809 or later.
-- .NET 10 runtime installed on the machine running the service.
+- .NET 10 **Windows Desktop Runtime** installed (the tray dashboard uses Windows Forms).
 - `rclone` installed and available to the service, either:
   - in the system `PATH`, or
   - configured with an absolute path in `Backup:RcloneExecutable`.
@@ -147,6 +147,25 @@ Test a native notification without starting a backup:
 Set `Notifications:Enabled` or `Notifications:UseToast` to `false` to disable backup notifications. The explicit test command still shows a test banner. Old `UseMessageFallback`, `MessageExecutable`, `MessageTimeoutSeconds`, and `InteractiveUser` settings are ignored. Delivery failures are logged without failing the backup.
 
 Native notification delivery uses [Microsoft's Windows Community Toolkit](https://learn.microsoft.com/en-us/dotnet/api/microsoft.toolkit.uwp.notifications.toastcontentbuilder).
+
+## Tray dashboard
+
+The sign-in companion now includes a teal Backuper tray icon. Existing `--install-notifications` shortcuts also start the tray; there is no additional startup application to configure. Windows may initially place the icon inside the hidden-icons menu; drag it beside the clock if you want it always visible.
+
+- Left-click the icon to open a compact status window near the taskbar. Closing the window leaves the tray and service running.
+- View the current backup state, transferred bytes and percentage, rclone-reported transfer rate in MiB/s and Mbps, elapsed time and ETA, file/check counts, errors, and successful/failed run totals.
+- Read the service's source, destination, daily schedule, configured bandwidth limit, and parallel transfers. These settings are read-only.
+- Right-click and choose **Exit (stop service)** to stop the `Backuper` Windows Service, wait for it to stop, and close the companion. Windows may request administrator permission. Cancelling or failing that request keeps the companion open with an error. This does not disable automatic service startup on the next boot.
+
+New backup logs use rclone's `--use-json-log --stats 5s --stats-log-level INFO` output. The service reads the latest statistics incrementally and publishes a small snapshot every two seconds under `Notifications:QueueDirectory/<app-id-hash>/Dashboard/status.json`. This avoids requiring the desktop account to read LocalSystem's private database and logs. No rclone credentials are included. Speed is rclone's reported transfer rate, not total network-adapter traffic; progress totals and ETA may change as rclone discovers files. Old plain-text logs have no structured statistics and display as unavailable. Stale snapshots are labelled and a stopped service never displays an active transfer rate.
+
+Republish and restart both the service and companion to use the dashboard. The tray's stop command targets the service named `Backuper`; IDE-hosted backup processes are separate and are not stopped by it. If the service is not installed, Exit simply closes the tray.
+
+Run regression checks (no real backups or service-stop requests):
+
+```powershell
+dotnet run --project Tests/Backuper.Tests.csproj
+```
 
 ## Run locally
 

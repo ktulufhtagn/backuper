@@ -3,6 +3,7 @@ using Backuper.Configuration;
 using Backuper.Data;
 using Backuper.Services;
 using Microsoft.EntityFrameworkCore;
+using Backuper.Desktop;
 
 // The elevated helper has a fixed operation and never starts the backup host.
 if (args.Contains("--stop-service", StringComparer.OrdinalIgnoreCase))
@@ -54,7 +55,10 @@ if (desktopNotifications || testNotification || installNotifications)
     using var mutex = new Mutex(true, @"Local\Backuper.NotificationCompanion", out var firstInstance);
     if (!firstInstance) return;
     builder.Services.AddHostedService<NotificationDesktopWorker>();
-    await builder.Build().RunAsync();
+    using var desktopHost = builder.Build();
+    await desktopHost.StartAsync();
+    try { await BackuperTray.RunAsync(desktopHost.Services.GetRequiredService<NotificationQueue>()); }
+    finally { await desktopHost.StopAsync(); }
     return;
 }
 builder.Services.AddSingleton<IBackupPathProvider, BackupPathProvider>();
