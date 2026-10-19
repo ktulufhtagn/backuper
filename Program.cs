@@ -30,6 +30,13 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
     Args = args,
     ContentRootPath = AppContext.BaseDirectory
 });
+// Local files are intentionally ignored by Git. Environment variables and CLI
+// arguments remain the highest-priority overrides.
+builder.Configuration
+    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.local.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args);
 builder.Services.AddWindowsService(options => options.ServiceName = "Backuper");
 
 builder.Services.Configure<BackupOptions>(builder.Configuration.GetSection(BackupOptions.SectionName));
@@ -62,6 +69,12 @@ if (desktopNotifications || testNotification || installNotifications)
     return;
 }
 builder.Services.AddSingleton<IBackupPathProvider, BackupPathProvider>();
+builder.Services.AddOptions<BackupOptions>()
+    .Validate(options => !string.IsNullOrWhiteSpace(options.SourcePath),
+        "Set Backup:SourcePath in your local or production configuration before starting backups.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Destination),
+        "Set Backup:Destination to your configured rclone remote before starting backups.")
+    .ValidateOnStart();
 
 builder.Services.AddDbContext<BackupDbContext>((serviceProvider, options) =>
 {

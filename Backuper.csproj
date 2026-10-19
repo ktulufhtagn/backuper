@@ -6,6 +6,7 @@
         <UseWindowsForms>true</UseWindowsForms>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <PathMap>$(MSBuildProjectDirectory)=/_/Backuper</PathMap>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,5 +23,9 @@
     <ItemGroup>
         <Compile Remove="Tests\**\*.cs" />
         <None Remove="Tests\**" />
+        <Content Update="appsettings*.local.json;appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+        <Content Update="appsettings.Production.json" CopyToPublishDirectory="Never" />
+        <None Update="appsettings*.local.json;appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+        <None Update="appsettings.Production.json" CopyToPublishDirectory="Never" />
     </ItemGroup>
 </Project>

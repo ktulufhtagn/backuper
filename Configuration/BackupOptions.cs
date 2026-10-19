@@ -4,9 +4,9 @@ public sealed class BackupOptions
 {
     public const string SectionName = "Backup";
 
-    public string SourcePath { get; set; } = @"C:\Data\ToBackUp";
+    public string SourcePath { get; set; } = string.Empty;
 
-    public string Destination { get; set; } = "backup-remote:backups";
+    public string Destination { get; set; } = string.Empty;
 
     public string RcloneExecutable { get; set; } = "rclone";
 

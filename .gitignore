@@ -10,3 +10,14 @@ Logs/
 *.db-shm
 *.db-wal
 publish/
+
+# Local overrides and credentials must never be published.
+appsettings.*.local.json
+appsettings.Local.json
+rclone.conf
+*.bundle
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
