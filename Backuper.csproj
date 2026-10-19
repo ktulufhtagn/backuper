@@ -6,6 +6,7 @@
         <UseWindowsForms>true</UseWindowsForms>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <PathMap>$(MSBuildProjectDirectory)=/_/Backuper</PathMap>
     </PropertyGroup>
 
