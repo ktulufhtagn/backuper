@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper.Services;
 
+/// <summary>Runs a due backup when the local calendar day has neither a success nor an active attempt.</summary>
 public sealed class BackupScheduler(
     BackupDbContext database,
     IBackupExecutor backupExecutor,
@@ -14,6 +15,7 @@ public sealed class BackupScheduler(
     IOptions<BackupOptions> options,
     ILogger<BackupScheduler> logger) : IBackupScheduler
 {
+    /// <inheritdoc/>
     public async Task RunIfDueAsync(CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.Now;

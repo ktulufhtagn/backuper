@@ -3,12 +3,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Backuper.Data;
 
+/// <summary>Persists backup attempts and aggregate state in the configured SQLite database.</summary>
 public sealed class BackupDbContext(DbContextOptions<BackupDbContext> options) : DbContext(options)
 {
+    /// <summary>Backup attempt history used for scheduling and diagnostics.</summary>
     public DbSet<BackupExecution> BackupExecutions => Set<BackupExecution>();
 
+    /// <summary>Singleton backup-state summary.</summary>
     public DbSet<BackupState> BackupStates => Set<BackupState>();
 
+    /// <inheritdoc/>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<BackupExecution>(entity =>
@@ -29,6 +33,9 @@ public sealed class BackupDbContext(DbContextOptions<BackupDbContext> options) :
         });
     }
 
+    /// <summary>Loads the singleton state row, creating and saving it if missing.</summary>
+    /// <param name="cancellationToken">Token used to cancel the operation.</param>
+    /// <returns>The tracked aggregate state entity.</returns>
     public async Task<BackupState> GetOrCreateStateAsync(CancellationToken cancellationToken)
     {
         var state = await BackupStates.SingleOrDefaultAsync(state => state.Id == BackupState.SingletonId, cancellationToken);
@@ -43,6 +50,9 @@ public sealed class BackupDbContext(DbContextOptions<BackupDbContext> options) :
         return state;
     }
 
+    /// <summary>Marks all unfinished attempts as interrupted when the host starts.</summary>
+    /// <remarks>An InProgress row left by a previous process is treated as interrupted; this does not resume rclone.</remarks>
+    /// <returns>A task that completes after recovery changes have been saved.</returns>
     public async Task MarkInterruptedRunsAsInterruptedAsync()
     {
         var interruptedRuns = await BackupExecutions

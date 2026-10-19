@@ -3,11 +3,13 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper.Services;
 
+/// <summary>Deletes expired top-level log files while logging individual deletion failures.</summary>
 public sealed class LogRetentionService(
     IBackupPathProvider pathProvider,
     IOptions<BackupOptions> options,
     ILogger<LogRetentionService> logger) : ILogRetentionService
 {
+    /// <inheritdoc/>
     public void DeleteExpiredLogs()
     {
         var backupOptions = options.Value;

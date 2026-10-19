@@ -12,6 +12,7 @@ namespace Backuper.Migrations;
 [Migration("20261017180000_InitialCreate")]
 public partial class InitialCreate
 {
+    /// <inheritdoc/>
     protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
 #pragma warning disable 612, 618

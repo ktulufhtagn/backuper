@@ -3,8 +3,11 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper.Services;
 
+/// <summary>Resolves configured storage paths and creates the data and log directories.</summary>
 public sealed class BackupPathProvider : IBackupPathProvider
 {
+    /// <summary>Resolves paths and creates the application-data and log directories.</summary>
+    /// <param name="options">Configured storage roots and relative paths.</param>
     public BackupPathProvider(IOptions<BackupOptions> options)
     {
         var backupOptions = options.Value;
@@ -18,10 +21,13 @@ public sealed class BackupPathProvider : IBackupPathProvider
         Directory.CreateDirectory(LogDirectory);
     }
 
+    /// <inheritdoc/>
     public string AppDataDirectory { get; }
 
+    /// <inheritdoc/>
     public string DatabasePath { get; }
 
+    /// <inheritdoc/>
     public string LogDirectory { get; }
 
     private static string ResolveUnderAppData(string configuredPath, string appDataDirectory)

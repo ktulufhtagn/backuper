@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper.Services;
 
+/// <summary>Executes rclone, records the result, and sends start and completion notifications.</summary>
 public sealed class RcloneBackupExecutor(
     BackupDbContext database,
     IWindowsNotifier notifier,
@@ -13,6 +14,7 @@ public sealed class RcloneBackupExecutor(
     IOptions<BackupOptions> options,
     ILogger<RcloneBackupExecutor> logger) : IBackupExecutor
 {
+    /// <inheritdoc/>
     public async Task ExecuteAsync(string scheduledDate, CancellationToken cancellationToken)
     {
         var backupOptions = options.Value;

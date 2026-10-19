@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Backuper.Migrations;
 
+/// <summary>Creates the initial backup history and singleton state schema.</summary>
 public partial class InitialCreate : Migration
 {
+    /// <inheritdoc/>
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
@@ -54,6 +56,7 @@ public partial class InitialCreate : Migration
             columns: new[] { "ScheduledDate", "Status" });
     }
 
+    /// <inheritdoc/>
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropTable(name: "BackupExecutions");

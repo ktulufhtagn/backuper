@@ -4,11 +4,13 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper;
 
+/// <summary>Checks the backup schedule periodically until the host requests shutdown.</summary>
 public sealed class Worker(
     IServiceScopeFactory scopeFactory,
     IOptions<BackupOptions> options,
     ILogger<Worker> logger) : BackgroundService
 {
+    /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
