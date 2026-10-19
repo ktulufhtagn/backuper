@@ -6,11 +6,13 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper.Services;
 
+/// <summary>Displays queued notifications and stores per-user receipts to avoid replay on normal restarts.</summary>
 public sealed class NotificationDesktopWorker(
     NotificationQueue queue,
     IOptions<NotificationOptions> options,
     ILogger<NotificationDesktopWorker> logger) : BackgroundService
 {
+    /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var receiptFile = Path.Combine(

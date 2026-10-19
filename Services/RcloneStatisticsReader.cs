@@ -5,6 +5,7 @@ using Backuper.Models;
 namespace Backuper.Services;
 
 // Incremental, bounded reads avoid loading multi-gigabyte backup logs into memory.
+/// <summary>Reads structured rclone transfer statistics incrementally with bounded log reads.</summary>
 public sealed class RcloneStatisticsReader
 {
     private string? path;
@@ -12,6 +13,10 @@ public sealed class RcloneStatisticsReader
     private string partial = "";
     private TransferStatistics? latest;
 
+    /// <summary>Reads complete new log records and retains the most recent statistics.</summary>
+    /// <remarks>Changing logs or detecting truncation resets state. Large unread spans are read from a bounded tail; IO errors propagate.</remarks>
+    /// <param name="file">Log path, or null to clear the current log selection.</param>
+    /// <returns>The latest statistics for this log, or null until a valid record is available.</returns>
     public TransferStatistics? Read(string? file)
     {
         if (file != path)
@@ -45,6 +50,9 @@ public sealed class RcloneStatisticsReader
         return latest;
     }
 
+    /// <summary>Parses one structured rclone log line containing a stats object.</summary>
+    /// <param name="line">One JSON log record.</param>
+    /// <returns>Parsed statistics, or null for malformed, plain-text, or non-statistics records.</returns>
     public static TransferStatistics? Parse(string line)
     {
         try

@@ -3,10 +3,13 @@ using System.Runtime.InteropServices;
 
 namespace Backuper.Desktop;
 
+/// <summary>Creates the vector-drawn vault-and-upload icon used by the desktop companion.</summary>
 public static class BackuperIcon
 {
     // A crisp vault with an upward arrow, drawn at tray resolution instead of
     // scaling a detailed illustration down to sixteen pixels.
+    /// <summary>Draws a scalable vault-and-upload symbol and returns an owned icon.</summary>
+    /// <returns>An icon that the caller must dispose.</returns>
     public static Icon Create()
     {
         using var bitmap = new Bitmap(64, 64);

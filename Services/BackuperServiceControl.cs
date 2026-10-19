@@ -4,8 +4,11 @@ using System.ServiceProcess;
 
 namespace Backuper.Services;
 
+/// <summary>Reads and stops the Windows service named Backuper, requesting elevation when needed.</summary>
 public static class BackuperServiceControl
 {
+    /// <summary>Reads the installed Backuper service state.</summary>
+    /// <returns>The Windows service state, Not installed if absent, or Unavailable if querying fails.</returns>
     public static string Status()
     {
         try { using var service = new ServiceController("Backuper"); return service.Status.ToString(); }
@@ -14,6 +17,8 @@ public static class BackuperServiceControl
         catch { return "Unavailable"; }
     }
 
+    /// <summary>Requests a stop and waits up to sixty seconds for the service to stop.</summary>
+    /// <remarks>An absent or already stopped service is a no-op. Permission and timeout errors propagate.</remarks>
     public static void Stop()
     {
         using var service = new ServiceController("Backuper");
@@ -27,6 +32,9 @@ public static class BackuperServiceControl
         { /* Already uninstalled. */ }
     }
 
+    /// <summary>Stops the service, launching a fixed-operation UAC helper only after access is denied.</summary>
+    /// <remarks>UAC cancellation, helper failure, and timeouts propagate so the tray can remain open.</remarks>
+    /// <returns>A task that completes when stopping succeeds or the service is absent.</returns>
     public static async Task StopWithElevationAsync()
     {
         try { await Task.Run(Stop); return; }

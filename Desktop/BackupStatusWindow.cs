@@ -2,6 +2,7 @@ using Backuper.Models;
 
 namespace Backuper.Desktop;
 
+/// <summary>Displays read-only backup settings and progress without owning the backup process.</summary>
 public sealed class BackupStatusWindow : Form
 {
     private static readonly Color Muted = Color.FromArgb(155, 168, 192);
@@ -18,6 +19,8 @@ public sealed class BackupStatusWindow : Form
     private readonly Panel progress = new();
     private double fraction;
 
+    /// <summary>Builds the read-only status window.</summary>
+    /// <param name="icon">Application icon owned by the tray context.</param>
     public BackupStatusWindow(Icon icon)
     {
         Text = "Backuper";
@@ -82,6 +85,7 @@ public sealed class BackupStatusWindow : Form
         layout.Controls.Add(label, 0, row);
     }
 
+    /// <summary>Shows and activates the window near the taskbar on the screen containing the pointer.</summary>
     public void ShowAtTray()
     {
         var area = Screen.FromPoint(Cursor.Position).WorkingArea;
@@ -90,8 +94,14 @@ public sealed class BackupStatusWindow : Form
         Activate();
     }
 
+    /// <summary>Replaces the explanatory or error message in the window.</summary>
+    /// <param name="text">Message to display.</param>
     public void SetNotice(string text) => notice.Text = text;
 
+    /// <summary>Refreshes the display and suppresses live speed when service data is stale or stopped.</summary>
+    /// <param name="data">Latest service snapshot, or null before one is available.</param>
+    /// <param name="service">Windows service status or a service-query fallback label.</param>
+    /// <param name="error">Optional read error that takes precedence over the snapshot notice.</param>
     public void UpdateStatus(BackupDashboard? data, string service, string? error)
     {
         var stale = data is not null && DateTimeOffset.UtcNow - data.UpdatedAt > TimeSpan.FromSeconds(15);
@@ -120,6 +130,9 @@ public sealed class BackupStatusWindow : Form
             "Close this window to keep Backuper in the tray. Right-click the tray icon to stop the service and exit.");
     }
 
+    /// <summary>Formats a byte quantity using binary units and the current culture.</summary>
+    /// <param name="bytes">Nonnegative byte quantity.</param>
+    /// <returns>A display value in B, KiB, MiB, GiB, or TiB.</returns>
     public static string FormatBytes(double bytes)
     {
         string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];

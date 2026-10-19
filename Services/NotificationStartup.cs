@@ -3,9 +3,13 @@ using System.Runtime.InteropServices;
 
 namespace Backuper.Services;
 
+/// <summary>Installs the per-user Startup shortcut and launches the desktop companion.</summary>
 public static class NotificationStartup
 {
     // One-time, explicit setup using the standard per-user Windows Startup folder.
+    /// <summary>Creates the per-user Startup shortcut and immediately launches the companion.</summary>
+    /// <remarks>Run from the permanent published Backuper.exe location; no backup scheduler is started.</remarks>
+    /// <param name="environmentName">Configuration environment passed to the companion at sign-in.</param>
     public static void Install(string environmentName)
     {
         var executable = Environment.ProcessPath

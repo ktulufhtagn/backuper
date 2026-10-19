@@ -5,6 +5,7 @@ using Backuper.Services;
 
 namespace Backuper.Desktop;
 
+/// <summary>Owns the notification-area icon, status window, polling timer, and stop-and-exit menu.</summary>
 public sealed class BackuperTray : ApplicationContext
 {
     private readonly Icon icon = BackuperIcon.Create();
@@ -15,6 +16,8 @@ public sealed class BackuperTray : ApplicationContext
     private bool refreshing;
     private bool exiting;
 
+    /// <summary>Creates the tray icon, status window, and dashboard polling loop.</summary>
+    /// <param name="queue">Shared queue used to locate the service dashboard snapshot.</param>
     public BackuperTray(NotificationQueue queue)
     {
         statusPath = Path.Combine(queue.DirectoryPath, "Dashboard", "status.json");
@@ -83,6 +86,7 @@ public sealed class BackuperTray : ApplicationContext
         }
     }
 
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing)
     {
         if (disposing)
@@ -92,6 +96,10 @@ public sealed class BackuperTray : ApplicationContext
         base.Dispose(disposing);
     }
 
+    /// <summary>Runs the desktop message loop on a dedicated STA thread.</summary>
+    /// <remarks>Does not start or stop the backup host by itself; service stopping is an explicit menu action.</remarks>
+    /// <param name="queue">Shared queue used by the desktop companion.</param>
+    /// <returns>A task that completes when the tray message loop exits.</returns>
     public static Task RunAsync(NotificationQueue queue)
     {
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

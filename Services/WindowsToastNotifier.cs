@@ -5,14 +5,17 @@ using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace Backuper.Services;
 
+/// <summary>Shows native toasts in a desktop session or queues them when running as a service.</summary>
 public sealed class WindowsToastNotifier(
     IOptions<NotificationOptions> options,
     NotificationQueue queue,
     ILogger<WindowsToastNotifier> logger) : IWindowsNotifier
 {
+    /// <inheritdoc/>
     public Task NotifyBackupStartingAsync(CancellationToken cancellationToken) =>
         NotifyAsync("Daily backup is starting.", cancellationToken);
 
+    /// <inheritdoc/>
     public Task NotifyBackupFinishedAsync(
         string status, string logFilePath, string? errorMessage, CancellationToken cancellationToken)
     {
@@ -49,6 +52,9 @@ public sealed class WindowsToastNotifier(
         }
     }
 
+    /// <summary>Shows a native Windows toast from the current desktop session.</summary>
+    /// <remarks>Requires a signed-in desktop session. Notification-registration failures propagate to the caller.</remarks>
+    /// <param name="message">Plain message text displayed below the Backuper title.</param>
     public static void ShowToast(string message)
     {
         new ToastContentBuilder().AddText("Backuper").AddText(message).Show();

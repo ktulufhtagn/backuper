@@ -7,10 +7,12 @@ using Microsoft.Extensions.Options;
 
 namespace Backuper.Services;
 
+/// <summary>Publishes backup history, settings, and rclone statistics for the desktop dashboard.</summary>
 public sealed class BackupDashboardPublisher(
     IServiceScopeFactory scopes, NotificationQueue queue, IOptions<BackupOptions> options,
     ILogger<BackupDashboardPublisher> logger) : BackgroundService
 {
+    /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var reader = new RcloneStatisticsReader();
