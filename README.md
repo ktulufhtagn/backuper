@@ -1,6 +1,6 @@
 # Backuper
 
-Small Windows background service that runs a daily `rclone` backup to a Backblaze-backed remote.
+Small Windows background service that runs a daily `rclone` backup to a remote you configure.
 
 ## What it does
 
@@ -32,11 +32,13 @@ If the service runs as a Windows Service, verify using the same Windows account 
 
 ## Configuration
 
-Runtime settings are read from `appsettings.json`, `appsettings.Development.json`, and `appsettings.Production.json`.
+The repository contains generic defaults and examples only. Source and destination are empty by default, and the backup host refuses to start until both are configured.
 
-`appsettings.Production.json` is intentionally ignored by Git because it is machine-specific.
+Copy `appsettings.Production.example.json` to `appsettings.Production.json` and replace its example paths and remote with your own. For IDE runs, put overrides in `appsettings.Development.local.json`. Both files are ignored by Git. The `backup-remote:backups` destination shown below is an example, not a preconfigured account.
 
-Default backup settings:
+Settings load in this order: `appsettings.json`, `appsettings.{Environment}.json`, `appsettings.Local.json`, `appsettings.{Environment}.local.json`, environment variables, then command-line arguments. Later values override earlier ones. Local overrides are available in local builds but excluded from published output. The private production configuration is also excluded from published output; copy it into the installed directory yourself. Configure rclone credentials separately using `rclone config`; never add `rclone.conf`, tokens, or logs to the repository.
+
+Example backup settings (edit before use):
 
 ```json
 {
@@ -189,7 +191,7 @@ Create a production build:
 dotnet publish Backuper.csproj -c Release -o .\publish
 ```
 
-Copy or create `appsettings.Production.json` inside `.\publish` and adjust machine-specific settings if needed.
+Copy your private `appsettings.Production.json` into `.\publish` after publishing and adjust the machine-specific settings. Public releases should contain only the example configuration. Use a new output directory when preparing a release; an old output directory can still contain private files from previous deployments.
 
 When updating from the earlier PowerShell notification implementation, publish to a fresh directory and deploy that output. The old `Services\ShowWindowsToast.ps1` is no longer used or shipped. No antivirus exclusions are required by the application.
 
