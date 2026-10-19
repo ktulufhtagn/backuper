@@ -222,3 +222,7 @@ sc.exe delete Backuper
 - If the service runs as `LocalSystem`, `%USERPROFILE%` resolves to that account profile, not your interactive user profile.
 - If you want data under your own user profile, configure the service to run as your Windows user or set `Backup:AppDataDirectory` to an explicit absolute path.
 - Service notifications require the desktop companion running in the recipient's signed-in session.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
